@@ -7,6 +7,7 @@ import {
   processVideo,
   serializeVideo,
   STORAGE_ROOT,
+  getVideoDurationFromFile,
 } from "../services/video.service.js";
 
 const parseTags = (tags) => {
@@ -86,6 +87,7 @@ export const uploadVideo = async (req, res) => {
       tags: processedTags,
       variants: [],
       processingStatus: "processing",
+      duration: await getVideoDurationFromFile(videoFile[0].path),
     });
 
     await newVideo.save();

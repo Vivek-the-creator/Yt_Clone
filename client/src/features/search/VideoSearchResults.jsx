@@ -19,15 +19,20 @@ const VideoSearchResults = () => {
   // Parse query parameter
   const query = new URLSearchParams(location.search);
   const searchTerm = query.get("q") || "";
+  const hasSearched = searchTerm.trim().length > 0;
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm]);
 
   // Fetch search results
   useEffect(() => {
-    if (searchTerm.trim()) {
+    if (hasSearched) {
       dispatch(fetchAllVideos({ search: searchTerm, page, limit: 6 }))
         .unwrap()
         .catch((err) => console.error("Fetch videos error:", err));
     }
-  }, [dispatch, searchTerm, page]);
+  }, [dispatch, hasSearched, searchTerm, page]);
 
   // Animation variants
   const cardVariants = {
@@ -80,7 +85,7 @@ const VideoSearchResults = () => {
             Videos
           </h3>
           <AnimatePresence>
-            {videos?.length > 0 ? (
+            {hasSearched && videos?.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10">
                 {videos.map((video) => (
                   <Link
@@ -139,7 +144,7 @@ const VideoSearchResults = () => {
                   </Link>
                 ))}
               </div>
-            ) : (
+            ) : hasSearched && !loading ? (
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -147,7 +152,15 @@ const VideoSearchResults = () => {
               >
                 No videos found.
               </motion.p>
-            )}
+            ) : !loading ? (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-gray-400 text-center text-lg py-8"
+              >
+                Enter a search term to find videos.
+              </motion.p>
+            ) : null}
           </AnimatePresence>
         </div>
 

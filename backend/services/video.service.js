@@ -2,6 +2,8 @@ import fs from "fs";
 import { promises as fsPromises } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import Video from "../models/video.model.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,7 +13,12 @@ export const STORAGE_ROOT = path.join(__dirname, "../storage");
 export const VIDEO_STORAGE_DIR = path.join(STORAGE_ROOT, "videos");
 export const THUMBNAIL_STORAGE_DIR = path.join(STORAGE_ROOT, "thumbnails");
 
-const VIDEO_VARIANTS = ["360p", "720p", "1080p"];
+const VIDEO_VARIANTS = [
+  { quality: "360p", height: 360 },
+  { quality: "720p", height: 720 },
+  { quality: "1080p", height: 1080 },
+];
+const execFileAsync = promisify(execFile);
 
 export const ensureStorageDirs = () => {
   for (const dir of [STORAGE_ROOT, VIDEO_STORAGE_DIR, THUMBNAIL_STORAGE_DIR]) {
@@ -33,6 +40,79 @@ export const buildPublicFileUrl = (storedPath, req) => {
   const baseUrl = explicitBaseUrl || requestBaseUrl;
 
   return baseUrl ? `${baseUrl}/storage/${normalizedPath}` : `/storage/${normalizedPath}`;
+};
+
+export const getAbsoluteStoragePath = (storedPath = "") =>
+  path.join(STORAGE_ROOT, normalizeStoredPath(storedPath));
+
+export const getVideoDurationFromFile = async (absoluteFilePath) => {
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v",
+    "error",
+    "-show_entries",
+    "format=duration",
+    "-of",
+    "default=noprint_wrappers=1:nokey=1",
+    absoluteFilePath,
+  ]);
+
+  const seconds = Number.parseFloat(stdout.trim());
+  if (!Number.isFinite(seconds)) {
+    throw new Error(`Unable to determine duration for ${absoluteFilePath}`);
+  }
+
+  return Math.round(seconds);
+};
+
+export const getVideoMetadataFromFile = async (absoluteFilePath) => {
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v",
+    "error",
+    "-select_streams",
+    "v:0",
+    "-show_entries",
+    "stream=width,height",
+    "-of",
+    "json",
+    absoluteFilePath,
+  ]);
+
+  const parsed = JSON.parse(stdout || "{}");
+  const stream = parsed.streams?.[0];
+
+  if (!stream?.width || !stream?.height) {
+    throw new Error(`Unable to determine video dimensions for ${absoluteFilePath}`);
+  }
+
+  return {
+    width: stream.width,
+    height: stream.height,
+  };
+};
+
+const transcodeVariant = async ({ sourceAbsolutePath, targetAbsolutePath, targetHeight }) => {
+  await execFileAsync("ffmpeg", [
+    "-y",
+    "-i",
+    sourceAbsolutePath,
+    "-vf",
+    `scale=-2:${targetHeight}`,
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-pix_fmt",
+    "yuv420p",
+    "-movflags",
+    "+faststart",
+    "-c:a",
+    "aac",
+    "-ac",
+    "2",
+    "-b:a",
+    "128k",
+    targetAbsolutePath,
+  ]);
 };
 
 export const serializeVideo = (videoDoc, req) => {
@@ -72,7 +152,7 @@ export const processVideo = async (videoId) => {
   }
 
   const sourceRelativePath = normalizeStoredPath(video.videoUrl);
-  const sourceAbsolutePath = path.join(STORAGE_ROOT, sourceRelativePath);
+  const sourceAbsolutePath = getAbsoluteStoragePath(sourceRelativePath);
 
   if (!fs.existsSync(sourceAbsolutePath)) {
     throw new Error(`Source video file missing at ${sourceAbsolutePath}`);
@@ -80,23 +160,30 @@ export const processVideo = async (videoId) => {
 
   const parsedSource = path.parse(sourceAbsolutePath);
   const variants = [];
+  const metadata = await getVideoMetadataFromFile(sourceAbsolutePath);
 
-  for (const quality of VIDEO_VARIANTS) {
-    const variantFilename = `${parsedSource.name}_${quality}${parsedSource.ext || ".mp4"}`;
+  for (const variantConfig of VIDEO_VARIANTS) {
+    const effectiveHeight = Math.min(metadata.height, variantConfig.height);
+    const variantFilename = `${parsedSource.name}_${variantConfig.quality}.mp4`;
     const variantAbsolutePath = path.join(parsedSource.dir, variantFilename);
     const variantRelativePath = normalizeStoredPath(
       path.relative(STORAGE_ROOT, variantAbsolutePath)
     );
 
-    await fsPromises.copyFile(sourceAbsolutePath, variantAbsolutePath);
+    await transcodeVariant({
+      sourceAbsolutePath,
+      targetAbsolutePath: variantAbsolutePath,
+      targetHeight: effectiveHeight,
+    });
 
     variants.push({
-      quality,
+      quality: variantConfig.quality,
       path: variantRelativePath,
     });
   }
 
   video.variants = variants;
+  video.duration = await getVideoDurationFromFile(sourceAbsolutePath);
   video.processingStatus = "ready";
   await video.save();
 

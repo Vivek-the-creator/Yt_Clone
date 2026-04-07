@@ -220,7 +220,6 @@ const VideoPlayer = () => {
             src={currentVideo.videoUrl}
             poster={currentVideo.thumbnailUrl || "/default-thumbnail.png"}
             className="w-full h-full object-contain rounded-t-lg cursor-pointer"
-            controls
             playsInline
             autoPlay
             onTimeUpdate={onTimeUpdate}

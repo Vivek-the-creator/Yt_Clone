@@ -16,9 +16,9 @@ export const uploadVideo = createAsyncThunk(
 
 export const fetchAllVideos = createAsyncThunk(
   "video/fetchAllVideos",
-  async ({ page, limit }, { rejectWithValue }) => {
+  async ({ page, limit, search = "" }, { rejectWithValue }) => {
     try {
-      const { data } = await api.fetchAllVideosAPI({ page, limit });
+      const { data } = await api.fetchAllVideosAPI({ page, limit, search });
 
       return {
         items: data.videos,

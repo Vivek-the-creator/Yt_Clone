@@ -12,6 +12,7 @@ import {
   processVideo,
   deleteVideoFiles,
   STORAGE_ROOT,
+  getVideoDurationFromFile,
 } from "./services/video.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -158,12 +159,14 @@ const seedDatabase = async () => {
 
       await downloadFile(sample.videoUrl, videoAbsolutePath);
       await downloadFile(sample.thumbnailUrl, thumbnailAbsolutePath);
+      const duration = await getVideoDurationFromFile(videoAbsolutePath);
 
       const createdVideo = await Video.create({
         author: user._id,
         title: sample.title,
         description: sample.description,
         category: sample.category,
+        duration,
         videoUrl: path.relative(STORAGE_ROOT, videoAbsolutePath).replace(/\\/g, "/"),
         thumbnailUrl: path
           .relative(STORAGE_ROOT, thumbnailAbsolutePath)
