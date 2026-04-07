@@ -49,10 +49,10 @@ export const uploadVideo = async (req, res) => {
       });
     }
 
-    if (!title?.trim() || !description?.trim() || !category?.trim()) {
+    if (!title?.trim() || !category?.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Title, description, and category are required",
+        message: "Title and category are required",
       });
     }
 
@@ -78,7 +78,7 @@ export const uploadVideo = async (req, res) => {
     const newVideo = new Video({
       author: authorId,
       title: title.trim(),
-      description: description.trim(),
+      description: description?.trim() || "",
       category: category.trim(),
       thumbnailUrl: thumbnailImage?.[0]
         ? toStoredRelativePath(thumbnailImage[0].path)
@@ -91,16 +91,17 @@ export const uploadVideo = async (req, res) => {
     });
 
     await newVideo.save();
-    await newVideo.populate("author", "name profileImage");
+    await processVideo(newVideo._id);
 
-    processVideo(newVideo._id).catch((error) => {
-      console.error("Video processing failed:", error.message);
-    });
+    const processedVideo = await Video.findById(newVideo._id).populate(
+      "author",
+      "name profileImage"
+    );
 
     res.status(201).json({
       success: true,
       message: "Video uploaded successfully",
-      video: serializeVideo(newVideo, req),
+      video: serializeVideo(processedVideo, req),
     });
   } catch (error) {
     console.error("Upload video error:", error);
@@ -618,6 +619,70 @@ export const deleteComment = async (req, res) => {
     res.status(200).json({ success: true, message: "Comment deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteVideo = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
+    if (!mongoose.isValidObjectId(videoId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid video ID.",
+      });
+    }
+
+    const video = await Video.findById(videoId);
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        message: "Video not found.",
+      });
+    }
+
+    if (video.author.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete videos uploaded from your account.",
+      });
+    }
+
+    await deleteVideoFiles(video);
+    await Comment.deleteMany({ video: videoId });
+    await Video.findByIdAndDelete(videoId);
+
+    await User.updateMany(
+      {},
+      {
+        $pull: {
+          savedVideos: { videoId },
+          likedVideos: { videoId },
+          viewHistory: { videoId },
+        },
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Video deleted successfully.",
+      videoId,
+    });
+  } catch (error) {
+    console.error("Error deleting video:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete video.",
+      error: error.message,
+    });
   }
 };
 

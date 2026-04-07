@@ -129,6 +129,11 @@ export const serializeVideo = (videoDoc, req) => {
         path: buildPublicFileUrl(variant.path, req),
       }))
     : [];
+  const preferredVariant =
+    variants.find((variant) => variant.quality === "720p") ||
+    variants.find((variant) => variant.quality === "360p") ||
+    variants.find((variant) => variant.quality === "1080p") ||
+    null;
 
   return {
     ...video,
@@ -137,7 +142,7 @@ export const serializeVideo = (videoDoc, req) => {
     sourceRelativePath: normalizeStoredPath(video.videoUrl),
     thumbnailPath: thumbnailPublicUrl,
     thumbnailRelativePath: normalizeStoredPath(video.thumbnailUrl),
-    videoUrl: variants[variants.length - 1]?.path || sourcePublicUrl,
+    videoUrl: preferredVariant?.path || sourcePublicUrl,
     thumbnailUrl: thumbnailPublicUrl,
     variants,
   };

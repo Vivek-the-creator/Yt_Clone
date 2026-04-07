@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaVideo, FaImage, FaTimes, FaTag } from "react-icons/fa";
@@ -7,6 +8,7 @@ import { uploadVideo } from "../../store/Slices/videoSlice";
 
 const UploadVideo = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.video);
 
   const [formData, setFormData] = useState({
@@ -153,6 +155,9 @@ const UploadVideo = () => {
     try {
       const result = await dispatch(uploadVideo(formDataToSend)).unwrap();
       toast.success(result.message || "Video uploaded successfully!");
+      if (result.video?._id) {
+        navigate(`/video/${result.video._id}`);
+      }
       setFormData({ title: "", category: "", description: "", tags: [] });
       setThumbnailImage(null);
       setVideoFile(null);

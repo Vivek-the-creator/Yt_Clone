@@ -12,9 +12,19 @@ export const uploadVideoAPI = (videoData) =>
     ...axiosConfig,
   });
 
-export const fetchAllVideosAPI = ({ page, limit, search = "" }) => {
+export const fetchAllVideosAPI = ({
+  page,
+  limit,
+  search = "",
+  author = "",
+  category = "",
+  sort = "",
+}) => {
   const params = { page, limit };
   if (search) params.search = search;
+  if (author) params.author = author;
+  if (category) params.category = category;
+  if (sort) params.sort = sort;
   return axios.get(`${BASE_URL}`, { ...axiosConfig, params });
 };
 
@@ -41,3 +51,6 @@ export const updateVideoAsViewedAPI = (videoId) =>
 
 export const addCommentAPI = (videoId, content) =>
   axios.post(`${BASE_URL}/${videoId}/comment`, { content }, axiosConfig);
+
+export const deleteVideoAPI = (videoId) =>
+  axios.delete(`${BASE_URL}/${videoId}`, axiosConfig);

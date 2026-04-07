@@ -16,9 +16,19 @@ export const uploadVideo = createAsyncThunk(
 
 export const fetchAllVideos = createAsyncThunk(
   "video/fetchAllVideos",
-  async ({ page, limit, search = "" }, { rejectWithValue }) => {
+  async (
+    { page, limit, search = "", author = "", category = "", sort = "" },
+    { rejectWithValue }
+  ) => {
     try {
-      const { data } = await api.fetchAllVideosAPI({ page, limit, search });
+      const { data } = await api.fetchAllVideosAPI({
+        page,
+        limit,
+        search,
+        author,
+        category,
+        sort,
+      });
 
       return {
         items: data.videos,
@@ -120,6 +130,18 @@ export const addComment = createAsyncThunk(
       return data.comment;
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data?.message);
+    }
+  }
+);
+
+export const deleteVideo = createAsyncThunk(
+  "video/deleteVideo",
+  async (videoId, { rejectWithValue }) => {
+    try {
+      const { data } = await api.deleteVideoAPI(videoId);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to delete video");
     }
   }
 );
@@ -233,7 +255,17 @@ const videoSlice = createSlice({
       })
       .addCase(addComment.fulfilled, (state, action) => {
         if (state.currentVideo && state.currentVideo.comments) {
-          state.currentVideo.comments.push(action.payload);
+          state.currentVideo.comments.unshift(action.payload);
+        }
+      })
+      .addCase(deleteVideo.fulfilled, (state, action) => {
+        const deletedVideoId = action.payload.videoId;
+        state.videos = state.videos.filter((video) => video._id !== deletedVideoId);
+        state.popularVideos = state.popularVideos.filter(
+          (video) => video._id !== deletedVideoId
+        );
+        if (state.currentVideo?._id === deletedVideoId) {
+          state.currentVideo = null;
         }
       })
       .addMatcher(

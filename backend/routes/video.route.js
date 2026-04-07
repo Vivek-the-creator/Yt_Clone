@@ -13,6 +13,7 @@ import {
   updateVideoAsViewed,
   addCommentToVideo,
   deleteComment,
+  deleteVideo,
 } from "../controllers/video.controller.js"
 
 const router = express.Router();
@@ -62,6 +63,7 @@ router.put("/:videoId/like", isLoggedIn, toggleLikeVideo);
 router.put("/:videoId/bookmark", isLoggedIn, toggleBookmarkVideo);
 router.put("/:videoId/viewed", updateVideoAsViewed);
 router.post("/:videoId/comment", isLoggedIn, addCommentToVideo);
+router.delete("/:videoId", isLoggedIn, deleteVideo);
 router.delete("/comment/:commentId", isLoggedIn, deleteComment);
 
 export default router;

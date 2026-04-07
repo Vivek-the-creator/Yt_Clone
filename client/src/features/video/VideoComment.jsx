@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import { addComment } from "../../store/Slices/videoSlice";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -13,6 +14,7 @@ const VideoComment = ({ videoId }) => {
   const { currentUser } = useSelector((state) => state.user);
   const [commentText, setCommentText] = useState("");
   const [successMessage, setSuccessMessage] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
 
   // Handle comment submission
   const handleAddComment = async (e) => {
@@ -20,6 +22,7 @@ const VideoComment = ({ videoId }) => {
     if (!commentText.trim()) return;
 
     try {
+      setSubmitError(null);
       await dispatch(addComment({ videoId, content: commentText })).unwrap();
       setCommentText(""); // Clear input
       setSuccessMessage("Comment posted successfully!");
@@ -27,6 +30,7 @@ const VideoComment = ({ videoId }) => {
     } catch (err) {
       console.error("Failed to add comment:", err);
       setSuccessMessage(null);
+      setSubmitError(err || "Failed to post comment");
     }
   };
 
@@ -70,6 +74,16 @@ const VideoComment = ({ videoId }) => {
             {successMessage}
           </motion.div>
         )}
+        {submitError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="text-red-400 text-center text-sm sm:text-base mb-3 sm:mb-4"
+          >
+            {submitError}
+          </motion.div>
+        )}
       </AnimatePresence>
       {currentUser ? (
         <form
@@ -92,7 +106,7 @@ const VideoComment = ({ videoId }) => {
             disabled={loading || !commentText.trim()}
             className="self-end px-4 sm:px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-lg hover:from-purple-700 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all text-sm sm:text-base"
           >
-            {loading ? "Posting..." : "Post Comment"}
+            {loading ? "Done" : "Post Comment"}
           </motion.button>
         </form>
       ) : (

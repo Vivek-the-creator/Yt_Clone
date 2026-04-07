@@ -17,6 +17,7 @@ import PopularVideoCardGrid from "../pages/home/PopularVideoCardGrid";
 import VideoSearchResults from "../features/search/VideoSearchResults";
 import Subscriptions from "../pages/Subscriptions";
 import History from "../pages/History";
+import MyVideos from "../pages/MyVideos";
 
 export default function AppRoutes() {
   return (
@@ -39,6 +40,7 @@ export default function AppRoutes() {
         <Route path="/popular" element={<PopularVideoCardGrid />} />
         <Route path="/video/:id" element={<VideoPlayer />} />
         <Route path="/search" element={<VideoSearchResults />} />
+        <Route path="/my-videos" element={<MyVideos />} />
         <Route path="/subscriptions" element={<Subscriptions />} />
         <Route path="/history" element={<History />} />
       </Route>

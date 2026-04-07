@@ -140,8 +140,10 @@ const userSlice = createSlice({
       })
       .addCase(fetchCurrentUser.fulfilled, (state, action) => {
         state.currentUser = action.payload;
+        state.fetchUserLoading = false;
       })
       .addCase(fetchCurrentUser.rejected, (state, action) => {
+        state.fetchUserLoading = false;
         state.error = action.payload;
       })
 

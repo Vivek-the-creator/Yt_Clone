@@ -1,12 +1,11 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FaHome, FaSearch, FaUser } from "react-icons/fa";
+import { FaHome, FaUser, FaVideo } from "react-icons/fa";
 import { MdLibraryAdd } from "react-icons/md";
-import { motion } from "framer-motion";
 
 const navItems = [
   { to: "/", icon: FaHome, text: "Home" },
-  { to: "/explore", icon: FaSearch, text: "Explore" },
+  { to: "/my-videos", icon: FaVideo, text: "My Videos" },
   { to: "/library", icon: MdLibraryAdd, text: "Library" },
   { to: "/user-profile", icon: FaUser, text: "Profile" },
  
